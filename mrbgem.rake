@@ -4,9 +4,9 @@ MRuby::Gem::Specification.new('picoruby-filesystem-fat') do |spec|
   spec.summary = 'FAT filesystem'
 
   spec.add_dependency 'picoruby-time'
-  # Both gems define the same C symbols (c__exist_q, c__unlink, c__rename, ...)
-  # so they cannot coexist in one build.
-  spec.add_conflict 'picoruby-littlefs'
+  # Coexists with picoruby-littlefs (e.g. littlefs on the internal flash,
+  # FAT on the SD card): the C symbols both gems used to share are prefixed
+  # with fat_ here.
 
   # TODO: use #porting instead
   Dir.glob("#{dir}/src/hal/*.c").each do |src|

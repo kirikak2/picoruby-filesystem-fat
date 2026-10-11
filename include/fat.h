@@ -17,14 +17,23 @@ extern "C" {
 #define SEEK_CUR 1
 #define SEEK_END 2
 
-void FILE_physical_address(FIL *fp, uint8_t **addr);
-int FILE_sector_size(void);
+/* Sector size of the volume fs is on (512 for an SD card). */
+static inline int
+FAT_volume_sector_size(const FATFS *fs)
+{
+#if FF_MAX_SS == FF_MIN_SS
+  (void)fs;
+  return FF_MAX_SS;
+#else
+  return fs->ssize;
+#endif
+}
 
 #if defined(PICORB_VM_MRUBY)
 
-mrb_value mrb__exist_p(mrb_state *mrb, mrb_value klass);
-mrb_value mrb__unlink(mrb_state *mrb, mrb_value klass);
-mrb_value mrb__rename(mrb_state *mrb, mrb_value klass);
+mrb_value mrb_fat__exist_p(mrb_state *mrb, mrb_value klass);
+mrb_value mrb_fat__unlink(mrb_state *mrb, mrb_value klass);
+mrb_value mrb_fat__rename(mrb_state *mrb, mrb_value klass);
 
 typedef struct prb_vfs_methods
 {
@@ -47,9 +56,9 @@ void mrb_init_class_FAT_Dir(mrb_state *mrb, struct RClass *class_FAT);
 
 #elif defined(PICORB_VM_MRUBYC)
 
-void c__exist_q(mrbc_vm *vm, mrbc_value v[], int argc);
-void c__unlink(mrbc_vm *vm, mrbc_value v[], int argc);
-void c__rename(mrbc_vm *vm, mrbc_value v[], int argc);
+void c_fat__exist_q(mrbc_vm *vm, mrbc_value v[], int argc);
+void c_fat__unlink(mrbc_vm *vm, mrbc_value v[], int argc);
+void c_fat__rename(mrbc_vm *vm, mrbc_value v[], int argc);
 
 typedef struct prb_vfs_methods
 {

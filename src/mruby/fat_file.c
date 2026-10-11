@@ -52,14 +52,7 @@ mrb_s_new(mrb_state *mrb, mrb_value klass)
 static mrb_value
 mrb_sector_size(mrb_state *mrb, mrb_value self)
 {
-  return mrb_fixnum_value(FILE_sector_size());
-}
-
-static mrb_value
-mrb_physical_address(mrb_state *mrb, mrb_value self)
-{
   FIL *fp = (FIL *)mrb_data_get_ptr(mrb, self, &mrb_fat_file_type);
-  uint8_t *addr;
 
   /* Check if file object is valid */
   if (!fp) {
@@ -69,10 +62,7 @@ mrb_physical_address(mrb_state *mrb, mrb_value self)
     mrb_raise(mrb, E_RUNTIME_ERROR, "Invalid file object");
   }
 
-  FILE_physical_address(fp, &addr);
-
-  /* Return physical address */
-  return mrb_fixnum_value((intptr_t)addr);
+  return mrb_int_value(mrb, FAT_volume_sector_size(fp->obj.fs));
 }
 
 static mrb_value
@@ -80,7 +70,7 @@ mrb_tell(mrb_state *mrb, mrb_value self)
 {
   FIL *fp = (FIL *)mrb_data_get_ptr(mrb, self, &mrb_fat_file_type);
   FSIZE_t pos = f_tell(fp);
-  return mrb_fixnum_value(pos);
+  return mrb_int_value(mrb, pos);
 }
 
 static mrb_value
@@ -114,14 +104,14 @@ mrb_seek(mrb_state *mrb, mrb_value self)
   FRESULT res;
   res = f_lseek(fp, new_pos);
   mrb_raise_iff_f_error(mrb, res, "f_lseek");
-  return mrb_fixnum_value(0);
+  return mrb_int_value(mrb, 0);
 }
 
 static mrb_value
 mrb_size(mrb_state *mrb, mrb_value self)
 {
   FIL *fp = (FIL *)mrb_data_get_ptr(mrb, self, &mrb_fat_file_type);
-  return mrb_fixnum_value(f_size(fp));
+  return mrb_int_value(mrb, f_size(fp));
 }
 
 
@@ -163,7 +153,7 @@ mrb_getbyte(mrb_state *mrb, mrb_value self)
   FRESULT res = f_read(fp, buff, 1, &br);
   mrb_raise_iff_f_error(mrb, res, "f_read");
   if (br == 1) {
-    return mrb_fixnum_value((unsigned char)buff[0]);
+    return mrb_int_value(mrb, (unsigned char)buff[0]);
   } else {
     return mrb_nil_value();
   }
@@ -180,7 +170,7 @@ mrb_write(mrb_state *mrb, mrb_value self)
   res = f_write(fp, RSTRING_PTR(str), RSTRING_LEN(str), &bw);
   if (res == FR_OK) res = f_sync(fp);
   mrb_raise_iff_f_error(mrb, res, "f_write|f_sync");
-  return mrb_fixnum_value(bw);
+  return mrb_int_value(mrb, bw);
 }
 
 static mrb_value
@@ -203,7 +193,7 @@ mrb_expand(mrb_state *mrb, mrb_value self)
   res = f_expand(fp, (FSIZE_t)size, 1);
   if (res == FR_OK) res = f_sync(fp);
   mrb_raise_iff_f_error(mrb, res, "f_expand|f_sync");
-  return mrb_fixnum_value(size);
+  return mrb_int_value(mrb, size);
 }
 
 static mrb_value
@@ -213,7 +203,7 @@ mrb_fsync(mrb_state *mrb, mrb_value self)
   FRESULT res;
   res = f_sync(fp);
   mrb_raise_iff_f_error(mrb, res, "f_sync");
-  return mrb_fixnum_value(0);
+  return mrb_int_value(mrb, 0);
 }
 
 
@@ -221,7 +211,7 @@ static void
 mrb_vfs_methods_free(mrb_state *mrb, void *ptr) {
 }
 
-struct mrb_data_type mrb_vfs_methods_type = {
+struct mrb_data_type mrb_fat_vfs_methods_type = {
   "VFSMethods", mrb_vfs_methods_free,
 };
 
@@ -238,12 +228,12 @@ mrb_s_vfs_methods(mrb_state *mrb, mrb_value klass)
     mrb_tell,
     mrb_size,
     mrb_fsync,
-    mrb__exist_p,
-    mrb__unlink
+    mrb_fat__exist_p,
+    mrb_fat__unlink
   };
   prb_vfs_methods *mm = (prb_vfs_methods *)mrb_malloc(mrb, sizeof(prb_vfs_methods));
   memcpy(mm, &m, sizeof(prb_vfs_methods));
-  mrb_value methods = mrb_obj_value(Data_Wrap_Struct(mrb, mrb_class(mrb, klass), &mrb_vfs_methods_type, mm));
+  mrb_value methods = mrb_obj_value(Data_Wrap_Struct(mrb, mrb_class(mrb, klass), &mrb_fat_vfs_methods_type, mm));
   return methods;
 }
 
@@ -270,7 +260,6 @@ mrb_init_class_FAT_File(mrb_state *mrb ,struct RClass *class_FAT)
   mrb_define_method_id(mrb, class_FAT_File, MRB_SYM(expand), mrb_expand, MRB_ARGS_REQ(1));
   mrb_define_method_id(mrb, class_FAT_File, MRB_SYM(fsync), mrb_fsync, MRB_ARGS_NONE());
 
-  mrb_define_method_id(mrb, class_FAT_File, MRB_SYM(physical_address), mrb_physical_address, MRB_ARGS_NONE());
   mrb_define_method_id(mrb, class_FAT_File, MRB_SYM(sector_size), mrb_sector_size, MRB_ARGS_NONE());
 
   mrb_define_class_method_id(mrb, class_FAT, MRB_SYM(vfs_methods), mrb_s_vfs_methods, MRB_ARGS_NONE());

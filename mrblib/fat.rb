@@ -68,7 +68,14 @@ class FAT
   #   - nil: no initialization needed
   #   - SPI object: SPI mode SD card
   #   - SDMMC object: SDMMC mode SD card
-  def initialize(device, label: "PICORUBY", driver: nil)
+  # sdmmc_slot / sdmmc_freq_khz (SDMMC only): the host slot the card is wired
+  # to and the bus clock ceiling, -1 to let the port choose. The slot is a
+  # board wiring fact the pin numbers do not always imply (on the ESP32-P4
+  # the slot 0 pins are IOMUX-only, so a card there is unreachable through
+  # slot 1). Taken here rather than from the SDMMC object so that any SDMMC
+  # class providing the pin accessors will do.
+  def initialize(device, label: "PICORUBY", driver: nil,
+                 sdmmc_slot: -1, sdmmc_freq_khz: -1)
     @prefix = "#{device}:"
     @label = label
     if driver.nil?
@@ -88,7 +95,7 @@ class FAT
       # SDMMC mode SD card
       # @type var driver: SDMMC
       FAT.init_sdmmc(driver.clk_pin, driver.cmd_pin, driver.d0_pin,
-                     driver.slot, driver.freq_khz)
+                     sdmmc_slot, sdmmc_freq_khz)
       sleep_ms 10
     end
   end

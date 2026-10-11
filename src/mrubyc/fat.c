@@ -189,7 +189,7 @@ c__contiguous_q(mrbc_vm *vm, mrbc_value v[], int argc)
   DWORD prev_sect = 0;
   FSIZE_t offset = 0;
   FIL fil;
-  const FSIZE_t sector_size = (const FSIZE_t)FILE_sector_size();
+  FSIZE_t sector_size;
   BYTE mode = FA_READ;
   const TCHAR *path = (const TCHAR *)GET_STRING_ARG(1);
 
@@ -204,6 +204,7 @@ c__contiguous_q(mrbc_vm *vm, mrbc_value v[], int argc)
   mrbc_raise_iff_f_error(vm, res, "f_open in File.contiguous?");
   if (res != FR_OK) return;
 
+  sector_size = (FSIZE_t)FAT_volume_sector_size(fil.obj.fs);
   file_size = f_size(&fil);
   if (file_size < sector_size) {
     SET_TRUE_RETURN();
@@ -283,10 +284,10 @@ mrbc_filesystem_fat_init(mrbc_vm *vm)
   mrbc_define_method(vm, class_FAT, "_chdir", c__chdir);
   mrbc_define_method(vm, class_FAT, "_utime", c__utime);
   mrbc_define_method(vm, class_FAT, "_mkdir", c__mkdir);
-  mrbc_define_method(vm, class_FAT, "_unlink", c__unlink);
-  mrbc_define_method(vm, class_FAT, "_rename", c__rename);
+  mrbc_define_method(vm, class_FAT, "_unlink", c_fat__unlink);
+  mrbc_define_method(vm, class_FAT, "_rename", c_fat__rename);
   mrbc_define_method(vm, class_FAT, "_chmod", c__chmod);
-  mrbc_define_method(vm, class_FAT, "_exist?", c__exist_q);
+  mrbc_define_method(vm, class_FAT, "_exist?", c_fat__exist_q);
   mrbc_define_method(vm, class_FAT, "_directory?", c__directory_q);
   mrbc_define_method(vm, class_FAT, "_setlabel", c__setlabel);
   mrbc_define_method(vm, class_FAT, "_getlabel", c__getlabel);
@@ -305,7 +306,7 @@ mrbc_filesystem_fat_init(mrbc_vm *vm)
 
 
 void
-c__exist_q(mrbc_vm *vm, mrbc_value v[], int argc)
+c_fat__exist_q(mrbc_vm *vm, mrbc_value v[], int argc)
 {
   TCHAR *path = (TCHAR *)GET_STRING_ARG(1);
   FILINFO fno = {0};
@@ -318,7 +319,7 @@ c__exist_q(mrbc_vm *vm, mrbc_value v[], int argc)
 }
 
 void
-c__unlink(mrbc_vm *vm, mrbc_value v[], int argc)
+c_fat__unlink(mrbc_vm *vm, mrbc_value v[], int argc)
 {
   TCHAR *path = (TCHAR *)GET_STRING_ARG(1);
   FRESULT res = f_unlink(path);
@@ -327,7 +328,7 @@ c__unlink(mrbc_vm *vm, mrbc_value v[], int argc)
 }
 
 void
-c__rename(mrbc_vm *vm, mrbc_value v[], int argc)
+c_fat__rename(mrbc_vm *vm, mrbc_value v[], int argc)
 {
   TCHAR *from = (TCHAR *)GET_STRING_ARG(1);
   TCHAR *to = (TCHAR *)GET_STRING_ARG(2);

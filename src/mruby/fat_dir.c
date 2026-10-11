@@ -71,7 +71,7 @@ mrb_pat_e(mrb_state *mrb, mrb_value self)
 {
   DIR *dp = (DIR *)mrb_data_get_ptr(mrb, self, &mrb_fat_dir_type);
   mrb_get_args(mrb, "z", &dp->pat);
-  return mrb_fixnum_value(0);
+  return mrb_int_value(mrb, 0);
 }
 
 static mrb_value
