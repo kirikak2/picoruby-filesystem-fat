@@ -12,6 +12,7 @@
 /
 /-------------------------------------------------------------------------*/
 
+#include "esp_idf_version.h"
 #include <string.h>
 #include <stdlib.h>
 #include "driver/spi_master.h"
@@ -712,7 +713,11 @@ sdmmc_init(void)
     return ESP_ERR_NO_MEM;
   }
 
-  // Initialize the SDMMC host
+  // Initialize the SDMMC host. It may be shared: the other slot can be in
+  // use already (e.g. ESP-Hosted's SDIO link to a Wi-Fi / BLE co-processor
+  // on ESP32-P4), in which case this returns ESP_OK without touching it. So
+  // never sdmmc_host_deinit() here (it would take that link down too): let
+  // go of our slot only (sdmmc_host_deinit_slot counts the slots in use).
   esp_err_t ret = sdmmc_host_init();
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "SDMMC host init failed: %s", esp_err_to_name(ret));
@@ -725,7 +730,7 @@ sdmmc_init(void)
   ret = sdmmc_host_init_slot(slot, &slot_config);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "SDMMC slot init failed: %s", esp_err_to_name(ret));
-    sdmmc_host_deinit();
+    /* (the host stays initialized: another slot may be using it) */
     free(sdmmc_card);
     sdmmc_card = NULL;
     return ret;
@@ -735,7 +740,11 @@ sdmmc_init(void)
   ret = sdmmc_card_init(&host, sdmmc_card);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "SD card init failed: %s", esp_err_to_name(ret));
-    sdmmc_host_deinit();
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
+    sdmmc_host_deinit_slot(slot);
+#else
+    sdmmc_host_deinit();     /* (no shared host before IDF 5.4) */
+#endif
     free(sdmmc_card);
     sdmmc_card = NULL;
     return ret;
